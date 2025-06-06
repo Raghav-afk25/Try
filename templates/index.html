@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>DeadlineTech API</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #2c3e50, #4ca1af);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            letter-spacing: 2px;
+        }
+        p.owner {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            font-weight: bold;
+        }
+        .btn {
+            background: #e91e63;
+            border: none;
+            padding: 1rem 2rem;
+            margin: 0.5rem;
+            border-radius: 50px;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(233, 30, 99, 0.4);
+            transition: background 0.3s ease;
+            width: 200px;
+        }
+        .btn:hover {
+            background: #c2185b;
+        }
+        form {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        input[type="password"] {
+            padding: 0.8rem;
+            border-radius: 25px;
+            border: none;
+            width: 200px;
+            font-size: 1rem;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>DeadlineTech API</h1>
+    <p class="owner">Owner: @Smaugxd</p>
+
+    <form action="/clear-cache" method="post">
+        <input type="password" name="api_key" placeholder="API Key" required />
+        <button type="submit" class="btn">Clear Cache</button>
+    </form>
+
+    <form action="/restart" method="post">
+        <input type="password" name="api_key" placeholder="API Key" required />
+        <button type="submit" class="btn">Restart API</button>
+    </form>
+</body>
+</html>
