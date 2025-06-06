@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+yt-dlp
+pyrogram
+pymongo
+python-dotenv
+jinja2
