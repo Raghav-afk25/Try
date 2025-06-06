@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from yt_dlp import YoutubeDL
 from pyrogram import Client
@@ -9,7 +9,6 @@ import os
 
 load_dotenv()
 
-API_KEY = os.getenv("API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 CACHE_CHANNEL = os.getenv("CACHE_CHANNEL")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -84,16 +83,11 @@ async def download_song(video_id: str):
     return {"status": "ok", "file_id": msg.audio.file_id}
 
 @app.post("/clear-cache")
-async def clear_cache(api_key: str = Form(...)):
-    if api_key != API_KEY:
-        raise HTTPException(status_code=403, detail="Unauthorized")
-
+async def clear_cache():
     db.delete_many({})
     return {"status": "cache cleared"}
 
 @app.post("/restart")
-async def restart(api_key: str = Form(...)):
-    if api_key != API_KEY:
-        raise HTTPException(status_code=403, detail="Unauthorized")
-    # Restart logic depends on your deployment setup
-    return {"status": "restart requested - implement server restart manually or with process manager"}
+async def restart():
+    # Restart logic depends on deployment
+    return {"status": "restart requested - implement manually"}
