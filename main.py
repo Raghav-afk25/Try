@@ -1,93 +1,50 @@
-from fastapi import FastAPI, HTTPException, Request, Form
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI
+from fastapi.responses import FileResponse, JSONResponse
 from yt_dlp import YoutubeDL
-from pyrogram import Client
-from pymongo import MongoClient
-from dotenv import load_dotenv
 import os
 
-load_dotenv()
+app = FastAPI()
 
-MONGO_URI = os.getenv("MONGO_URI")
-CACHE_CHANNEL = os.getenv("CACHE_CHANNEL")
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-API_ID = int(os.getenv("API_ID"))
-API_HASH = os.getenv("API_HASH")
+DOWNLOAD_DIR = "downloads"
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-app = FastAPI(title="DeadlineTech API")
+YDL_OPTIONS = {
+    "format": "bestaudio/best",
+    "noplaylist": True,
+    "quiet": True,
+    "extractor_args": {"youtube": ["player_client=android"]},  # Bypass login & CAPTCHA
+    "outtmpl": f"{DOWNLOAD_DIR}/%(id)s.%(ext)s",
+    "cachedir": False,
+    "postprocessors": [{
+        "key": "FFmpegExtractAudio",
+        "preferredcodec": "mp3",
+        "preferredquality": "192",
+    }],
+}
 
-templates = Jinja2Templates(directory="templates")
 
-mongo = MongoClient(MONGO_URI)
-db = mongo.ytmusic.files
+@app.get("/")
+async def root():
+    return {"status": "OK", "usage": "/download/song/{video_id}"}
 
-bot = Client(
-    "ytapi",
-    bot_token=BOT_TOKEN,
-    api_id=API_ID,
-    api_hash=API_HASH
-)
-bot.start()
-
-def get_audio_info(video_id):
-    url = f"https://www.youtube.com/watch?v={video_id}"
-    ydl_opts = {
-        "quiet": True,
-        "geo_bypass": True,
-        "format": "bestaudio[ext=m4a]",
-        "user_agent": "Mozilla/5.0"
-    }
-    with YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-        return {
-            "id": info["id"],
-            "title": info["title"],
-            "url": info["webpage_url"]
-        }
-
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "owner": "@Smaugxd"})
 
 @app.get("/download/song/{video_id}")
 async def download_song(video_id: str):
-    data = db.find_one({"video_id": video_id})
-    if data:
-        return {"status": "cached", "file_id": data["file_id"]}
-
+    url = f"https://www.youtube.com/watch?v={video_id}"
     try:
-        info = get_audio_info(video_id)
+        with YoutubeDL(YDL_OPTIONS) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+            filename = filename.rsplit(".", 1)[0] + ".mp3"
+
+        if os.path.exists(filename):
+            return FileResponse(
+                filename,
+                media_type="audio/mpeg",
+                filename=os.path.basename(filename)
+            )
+        else:
+            return JSONResponse(status_code=404, content={"error": "File not found after download."})
+
     except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Video not found: {e}")
-
-    file_name = f"{video_id}.m4a"
-    ydl_opts = {
-        "quiet": True,
-        "geo_bypass": True,
-        "format": "bestaudio[ext=m4a]",
-        "outtmpl": file_name,
-        "user_agent": "Mozilla/5.0"
-    }
-
-    try:
-        with YoutubeDL(ydl_opts) as ydl:
-            ydl.download([info["url"]])
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Download error: {e}")
-
-    msg = await bot.send_audio(CACHE_CHANNEL, audio=file_name, title=info["title"])
-    db.insert_one({"video_id": video_id, "file_id": msg.audio.file_id})
-    os.remove(file_name)
-
-    return {"status": "ok", "file_id": msg.audio.file_id}
-
-@app.post("/clear-cache")
-async def clear_cache():
-    db.delete_many({})
-    return {"status": "cache cleared"}
-
-@app.post("/restart")
-async def restart():
-    # Restart logic depends on deployment
-    return {"status": "restart requested - implement manually"}
+        return JSONResponse(status_code=500, content={"error": str(e)})
